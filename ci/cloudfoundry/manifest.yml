@@ -1,0 +1,5 @@
+---
+applications:
+- name: mbhave-consumer-app
+  memory: 1G
+  instances: 1

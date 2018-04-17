@@ -1,0 +1,52 @@
+resource_types:
+- name: artifactory-resource
+  type: docker-image
+  source:
+    repository: springio/artifactory-resource
+    tag: 0.0.4
+resources:
+- name: git-repo
+  type: git
+  source:
+    uri: https://github.com/mbhave/concourse-demo-app.git
+    branch: master
+- name: artifactory-repo
+  type: artifactory-resource
+  source:
+    uri: https://mbhavetest1.jfrog.io/mbhavetest1
+    build_name: example-library
+- name: cf
+  type: cf
+  source:
+    api: https://api.run.pivotal.io
+    username: ((cf-email))
+    password: ((cf-password))
+    organization: ((cf-org))
+    space: ((cf-space))
+jobs:
+- name: build
+  plan:
+  - get: git-repo
+    trigger: true
+  - get: artifactory-repo
+    trigger: true
+  - task: build
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: openjdk
+          tag: 8-jdk-alpine
+      inputs:
+      - name: git-repo
+      caches:
+      - path: maven
+      outputs:
+      - name: build-output
+      run:
+        path: git-repo/ci/scripts/build.sh
+  - put: cf
+    params:
+      manifest: git-repo/ci/cloudfoundry/manifest.yml
+      path: build-output/consumer.jar
